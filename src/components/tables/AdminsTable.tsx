@@ -32,8 +32,7 @@ import axios from "axios";
 import { SkeletonRow } from "../common/SkeletonRow";
 import { Admin } from "../common/types";
 import { useAuth } from "../../context/AuthContext";
-import { Search } from "lucide-react";
-import SearchInput from "../ui/search/searchInput";
+import SearchInput from "../ui/search/SearchInput";
 interface ErrorType {
   username?: string;
   password?: string;
@@ -118,26 +117,30 @@ export default function UsersTable() {
     try {
       const token = localStorage.getItem("access_token");
       if (!token || !editUserId || !originalData) return;
+
       const payload = getChangedFields();
-      if (formData.username) payload.username = formData.username;
-      if (formData.phone_number) payload.phone_number = formData.phone_number;
-      if (formData.password) payload.password = formData.password;
+
       if (Object.keys(payload).length === 0) {
         toast.error("Hech qanday o'zgarish kiritilmadi");
         return;
       }
+
       const res = await axios.patch(`${API}/admin/${editUserId}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast.success("Admin muvaffaqqiyatli yangilandi!");
+
+      toast.success("Admin muvaffaqiyatli yangilandi!");
+
       const updatedUser = res.data.data;
+
       setUsersData((prev) =>
         prev.map((u) => (u.id === editUserId ? updatedUser : u))
       );
+
       closeModal();
-    } catch (error: any) {
-      toast.error("Yangilashda xatolik yuz berdi!");
+    } catch (error) {
       console.error("Update error:", error);
+      toast.error("Yangilashda xatolik yuz berdi!");
     }
   };
 
@@ -265,7 +268,7 @@ export default function UsersTable() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const isChanged = <T,>(newVal: T, oldVal: T) => newVal !== oldVal;
+  const isChanged = (a: any, b: any) => String(a) !== String(b);
 
   const FetchValidate = () => {
     if (!originalData) return true;

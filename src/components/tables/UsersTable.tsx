@@ -199,14 +199,14 @@ export default function UsersTable() {
 
     fd.append("is_active", String(formData.active));
 
-    if (isChanged(formData.blocked, originalData.blocked))
-      fd.append("is_blocked", String(formData.blocked));
-
+    fd.append("is_blocked", formData.blocked ? "aa" : "");
+    for (const pair of fd.entries()) {
+      console.log(pair[0], pair[1]);
+    }
     if ([...fd.entries()].length === 0) {
       toast.error("Hech qanday ozgarish kiritilmadi");
       return;
     }
-
     const response = await axios.patch(`${API}/store/${editUserId}`, fd, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -214,7 +214,7 @@ export default function UsersTable() {
       },
     });
     const updatedUser = response.data.data;
-
+    console.log(response.data.data);
     setUsersData((prev) =>
       prev.map((u) => (u.id === editUserId ? updatedUser : u))
     );
@@ -246,11 +246,6 @@ export default function UsersTable() {
     if (file) {
       setFormData({ ...formData, file: file });
     }
-  };
-  const [isBlocked, setisBlocked] = useState(false);
-  const handleBlockChange = (checked: boolean) => {
-    setisBlocked(checked);
-    setFormData({ ...formData, blocked: checked });
   };
 
   const [errors, setErrors] = useState<ErrorType>({});
@@ -850,9 +845,14 @@ export default function UsersTable() {
                             Blocked
                           </h1>
                           <Switch
-                            label={isBlocked ? "ON" : "OFF"}
-                            defaultChecked={isBlocked}
-                            onChange={handleBlockChange}
+                            checked={formData.blocked}
+                            label={formData.blocked ? "ON" : "OFF"}
+                            onChange={(checked) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                blocked: checked,
+                              }))
+                            }
                           />
                         </div>
                       )}

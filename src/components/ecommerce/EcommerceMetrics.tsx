@@ -88,7 +88,7 @@ export default function EcommerceMetrics({ period }: Props) {
 
     const now = new Date();
 
-    // Shu oyda ro‘yxatdan o‘tganlar
+    // Shu oyda ro‘yxatdan o‘tganlar  
     const usersThisMonth = allStores.stores.filter((user) => {
       const date = new Date(user.created_at);
       return (
@@ -190,6 +190,7 @@ export default function EcommerceMetrics({ period }: Props) {
                 + {newClosedDebts}{" "}
                 <span className="text-[12px] font-extralight">
                   Yangi yopilgan nasiyalar
+                  
                 </span>
               </span>
             </h4>

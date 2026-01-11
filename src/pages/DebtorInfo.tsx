@@ -50,18 +50,16 @@ export interface Debtor {
 
 const formatDate = (date?: string) => {
   if (!date) return "-";
-
   const d = new Date(date);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 };
 
 const formatMoney = (amount?: string | number) => {
-  if (!amount) return "0 UZS";
-  return Number(amount).toLocaleString("uz-UZ") + " " + "so'm";
+  if (!amount) return "0 so'm";
+  return Number(amount).toLocaleString("uz-UZ") + " so'm";
 };
 
 const StatusBadge = ({ status }: { status: DebtStatus }) => {
@@ -80,11 +78,14 @@ const StatusBadge = ({ status }: { status: DebtStatus }) => {
 export default function DebtorInfoPage() {
   const { id } = useParams();
   const API = import.meta.env.VITE_API_URL;
+
   const [debtorData, setDebtorData] = useState<Debtor | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [more, setMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [more, setMore] = useState(false);
+
   const allDebts = debtorData?.debts ?? [];
-  const visibleDebts = debtorData?.debts.slice(0, 3) ?? [];
+  const visibleDebts = more ? allDebts : allDebts.slice(0, 3);
+
   const getData = async () => {
     try {
       setIsLoading(true);
@@ -94,9 +95,10 @@ export default function DebtorInfoPage() {
         },
       });
       setDebtorData(res.data.data);
-      setIsLoading(false);
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,6 +124,7 @@ export default function DebtorInfoPage() {
       />
 
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 space-y-8">
+        {/* HEADER */}
         <div className="bg-gray-100/30 dark:bg-[#171F2F] rounded-xl shadow-sm p-6 flex flex-col md:items-center md:flex-row gap-6">
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl font-semibold">
@@ -161,12 +164,14 @@ export default function DebtorInfoPage() {
           </div>
         </div>
 
+        {/* DEBTS */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Qarzlar ro'yxati
             </h2>
-            {(debtorData?.debts?.length ?? 0) > 2 && (
+
+            {(allDebts.length ?? 0) > 3 && (
               <button
                 className="cursor-pointer text-[14px] underline hover:text-blue-500"
                 onClick={() => setMore((prev) => !prev)}
@@ -176,12 +181,12 @@ export default function DebtorInfoPage() {
             )}
           </div>
 
-          {debtorData?.debts?.length === 0 ? (
+          {visibleDebts.length === 0 ? (
             <div className="bg-gray-100/30 dark:bg-[#171F2F] rounded-xl shadow-sm p-10 text-center text-gray-500">
               Hozircha qarzlar mavjud emas
             </div>
           ) : (
-            debtorData?.debts?.map((debt) => (
+            visibleDebts.map((debt) => (
               <div
                 key={debt.id}
                 className="bg-gray-100/30 dark:bg-[#171F2F] rounded-xl shadow-sm p-6 space-y-6"

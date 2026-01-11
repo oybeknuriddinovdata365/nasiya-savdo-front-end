@@ -1,21 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SwitchProps {
   label: string;
-  defaultChecked?: boolean;
+  checked?: boolean;
   disabled?: boolean;
   onChange?: (checked: boolean) => void;
-  color?: "blue" | "gray"; // Added prop to toggle color theme
+  color?: "blue" | "gray";
 }
 
 const Switch: React.FC<SwitchProps> = ({
   label,
-  defaultChecked = false,
+  checked = false,
   disabled = false,
   onChange,
-  color = "blue", // Default to blue color
+  color = "blue",
 }) => {
-  const [isChecked, setIsChecked] = useState(defaultChecked);
+  const [isChecked, setIsChecked] = useState(checked);
+
+  // Sync external checked prop with internal state
+  useEffect(() => {
+    setIsChecked(checked);
+  }, [checked]);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -30,8 +35,8 @@ const Switch: React.FC<SwitchProps> = ({
     color === "blue"
       ? {
           background: isChecked
-            ? "bg-brand-500 "
-            : "bg-gray-200 dark:bg-white/10", // Blue version
+            ? "bg-brand-500"
+            : "bg-gray-200 dark:bg-white/10",
           knob: isChecked
             ? "translate-x-full bg-white"
             : "translate-x-0 bg-white",
@@ -39,7 +44,7 @@ const Switch: React.FC<SwitchProps> = ({
       : {
           background: isChecked
             ? "bg-gray-800 dark:bg-white/10"
-            : "bg-gray-200 dark:bg-white/10", // Gray version
+            : "bg-gray-200 dark:bg-white/10",
           knob: isChecked
             ? "translate-x-full bg-white"
             : "translate-x-0 bg-white",
@@ -50,7 +55,7 @@ const Switch: React.FC<SwitchProps> = ({
       className={`flex cursor-pointer select-none items-center gap-3 text-sm font-medium ${
         disabled ? "text-gray-400" : "text-gray-700 dark:text-gray-400"
       }`}
-      onClick={handleToggle} // Toggle when the label itself is clicked
+      onClick={handleToggle}
     >
       <div className="relative">
         <div
