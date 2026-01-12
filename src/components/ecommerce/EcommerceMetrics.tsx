@@ -51,7 +51,6 @@ export default function EcommerceMetrics({ period }: Props) {
       );
       setAllStores(res.data.data);
       // nasiya yopilgan debtorlarni sanab olish
-      console.log(res.data.data)
       const closedDebtsCount =
         res.data.data?.debts?.filter(
           (debt: Debt) => debt.debt_status === "closed"
@@ -120,7 +119,6 @@ export default function EcommerceMetrics({ period }: Props) {
     const usersThisYear = allStores.stores.filter(
       (user) => new Date(user.created_at).getFullYear() === currentYear
     );
-    console.log(usersThisYear);
 
     //  Shu yilda yopilgan qarzlar
     const closedDebtsThisYear = allStores.debts.filter(

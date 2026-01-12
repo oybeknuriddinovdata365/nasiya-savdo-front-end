@@ -94,7 +94,6 @@ function UserInfo() {
         const data = res.data.data;
         const user = data?.stores?.find((user: any) => user.id === Number(id));
         setUserData(user || null);
-        console.log(res.data.data);
       } catch (error) {
         console.log(error);
       } finally {

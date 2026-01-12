@@ -200,9 +200,7 @@ export default function UsersTable() {
     fd.append("is_active", String(formData.active));
 
     fd.append("is_blocked", formData.blocked ? "aa" : "");
-    for (const pair of fd.entries()) {
-      console.log(pair[0], pair[1]);
-    }
+
     if ([...fd.entries()].length === 0) {
       toast.error("Hech qanday ozgarish kiritilmadi");
       return;
@@ -214,7 +212,6 @@ export default function UsersTable() {
       },
     });
     const updatedUser = response.data.data;
-    console.log(response.data.data);
     setUsersData((prev) =>
       prev.map((u) => (u.id === editUserId ? updatedUser : u))
     );
@@ -431,7 +428,6 @@ export default function UsersTable() {
   const [editUserId, setEditUserId] = useState<number | null>(null);
   const handleEdit = (user: User) => {
     setEditUserId(user.id);
-    console.log(formData);
     setFormData({
       login: user.login,
       password: "",
