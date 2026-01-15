@@ -38,7 +38,7 @@ import DefaultUserIcon from "../../assets/defUserIcon.png";
 import { SkeletonRow } from "../common/SkeletonRow";
 import { Info } from "lucide-react";
 import { useNavigate } from "react-router";
-import SearchInput from "../ui/search/SearchInput.tsx";
+import SearchInput from "../ui/search/SearchInput";
 interface ErrorType {
   login?: string;
   password?: string;

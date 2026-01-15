@@ -32,7 +32,7 @@ import axios from "axios";
 import { SkeletonRow } from "../common/SkeletonRow";
 import { Admin } from "../common/types";
 import { useAuth } from "../../context/AuthContext";
-import SearchInput from "../ui/search/SearchInput.tsx";
+import SearchInput from "../ui/search/SearchInput";
 interface ErrorType {
   username?: string;
   password?: string;
