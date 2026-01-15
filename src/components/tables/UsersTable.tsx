@@ -38,7 +38,7 @@ import DefaultUserIcon from "../../assets/defUserIcon.png";
 import { SkeletonRow } from "../common/SkeletonRow";
 import { Info } from "lucide-react";
 import { useNavigate } from "react-router";
-import SearchInput from "../ui/search/SearchInput";
+import SearchInput from "../ui/search/SearchInput.tsx";
 interface ErrorType {
   login?: string;
   password?: string;
@@ -57,8 +57,8 @@ interface User {
   phone_number: string;
   pin_code: string;
   wallet: number;
-  file: File | null; // upload uchun
-  image: string | null; // backenddan keladigan URL
+  file: File | null;
+  image: string | null; 
   is_active: boolean;
   is_blocked: boolean;
 }
@@ -134,7 +134,7 @@ export default function UsersTable() {
       fd.append("pin_code", formData.pin_code);
 
       if (formData.file instanceof File) {
-        fd.append("file", formData.file); // backend image kutadi
+        fd.append("file", formData.file);
       }
 
       const response = await axios.post(`${API}/store/create`, fd, {
