@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BoxIconLine, GroupIcon } from "../../icons";
-import { DashboardResponse, Period, Debt } from "../../pages/Dashboard/Home";
+import { DashboardResponse, Period } from "../../pages/Dashboard/Home";
 
 interface Props {
   period: Period;
@@ -29,13 +29,13 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
       const todayStr = today.toDateString();
 
       const usersToday = data.stores.filter(
-        (user) => new Date(user.created_at).toDateString() === todayStr
+        (user) => new Date(user.created_at).toDateString() === todayStr,
       ).length;
 
       const closedDebtsToday = data.debts.filter(
         (debt) =>
           debt.debt_status === "closed" &&
-          new Date(debt.created_at).toDateString() === todayStr
+          new Date(debt.created_at).toDateString() === todayStr,
       ).length;
 
       setCountNewUsers(usersToday);
@@ -66,13 +66,13 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
       const currentYear = today.getFullYear();
 
       const usersThisYear = data.stores.filter(
-        (user) => new Date(user.created_at).getFullYear() === currentYear
+        (user) => new Date(user.created_at).getFullYear() === currentYear,
       ).length;
 
       const closedDebtsThisYear = data.debts.filter(
         (debt) =>
           debt.debt_status === "closed" &&
-          new Date(debt.created_at).getFullYear() === currentYear
+          new Date(debt.created_at).getFullYear() === currentYear,
       ).length;
 
       setCountNewUsers(usersThisYear);
