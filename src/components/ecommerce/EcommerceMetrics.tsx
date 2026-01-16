@@ -1,149 +1,101 @@
-import axios from "axios";
-import { BoxIconLine, GroupIcon } from "../../icons";
 import { useEffect, useState } from "react";
-type Store = {
-  id?: number;
-  name?: string;
-  created_at: string;
-};
-
-type Debtor = {
-  id?: number;
-  name?: string;
-  created_at: string;
-};
-
-type Debt = {
-  id?: number;
-  amount?: number;
-  debt_status?: DebtStatus;
-  created_at: string;
-};
-type DebtStatus = "active" | "closed";
-
-type DashboardResponse = {
-  total_users: number;
-  stores: Store[];
-  totalDebtors: number;
-  debtors: Debtor[];
-  debts: Debt[];
-  closed_debts: Debt[];
-  total_closed_debts: number;
-};
-type Period = "day" | "month" | "year";
+import { BoxIconLine, GroupIcon } from "../../icons";
+import { DashboardResponse, Period, Debt } from "../../pages/Dashboard/Home";
 
 interface Props {
   period: Period;
+  data: DashboardResponse | null;
+  isLoading: boolean;
 }
-export default function EcommerceMetrics({ period }: Props) {
-  const [allStores, setAllStores] = useState<DashboardResponse>();
+
+export default function EcommerceMetrics({ period, data, isLoading }: Props) {
   const [countNewUsers, setCountNewUsers] = useState<number>(0);
-  const token = localStorage.getItem("access_token");
-  const [totalcClosedDebts, setTotalClosedDebts] = useState<number>(0);
+  const [totalClosedDebts, setTotalClosedDebts] = useState<number>(0);
   const [newClosedDebts, setNewClosedDebts] = useState<number>(0);
-  const handleGetUsers = async () => {
-    try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/admin/statistics`,
-        {
-          headers: { Authorization: "Bearer " + token },
-        }
-      );
-      setAllStores(res.data.data);
-      // nasiya yopilgan debtorlarni sanab olish
-      const closedDebtsCount =
-        res.data.data?.debts?.filter(
-          (debt: Debt) => debt.debt_status === "closed"
-        ).length ?? 0;
-      setTotalClosedDebts(closedDebtsCount);
-      // ==========================================
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  const handleDaySelected = () => {
-    if (!allStores) return;
 
-    const today = new Date().toDateString();
-
-    //  Bugun yangi ro‘yxatdan o‘tganlar
-    const usersToday = allStores.stores.filter(
-      (user: Store) => new Date(user.created_at).toDateString() === today
-    );
-
-    //  Bugun yopilgan qarzlar
-    const closedDebtsToday = allStores.debts.filter(
-      (debt: Debt) =>
-        debt.debt_status === "closed" &&
-        new Date(debt.created_at).toDateString() === today
-    );
-
-    setCountNewUsers(usersToday.length);
-    setNewClosedDebts(closedDebtsToday.length);
-  };
-
-  const handleMonthSelected = () => {
-    if (!allStores) return;
-
-    const now = new Date();
-
-    // Shu oyda ro‘yxatdan o‘tganlar  
-    const usersThisMonth = allStores.stores.filter((user) => {
-      const date = new Date(user.created_at);
-      return (
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
-    });
-
-    // Shu oyda yopilgan qarzlar
-    const closedDebtsThisMonth = allStores.debts.filter((debt) => {
-      const date = new Date(debt.created_at);
-      return (
-        debt.debt_status === "closed" &&
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
-    });
-
-    setCountNewUsers(usersThisMonth.length);
-    setNewClosedDebts(closedDebtsThisMonth.length);
-  };
-
-  const handleYearSelected = () => {
-    if (!allStores) return;
-
-    const currentYear = new Date().getFullYear();
-
-    // Shu yilda ro‘yxatdan o‘tganlar
-    const usersThisYear = allStores.stores.filter(
-      (user) => new Date(user.created_at).getFullYear() === currentYear
-    );
-
-    //  Shu yilda yopilgan qarzlar
-    const closedDebtsThisYear = allStores.debts.filter(
-      (debt) =>
-        debt.debt_status === "closed" &&
-        new Date(debt.created_at).getFullYear() === currentYear
-    );
-
-    setCountNewUsers(usersThisYear.length);
-    setNewClosedDebts(closedDebtsThisYear.length);
-  };
+  // Ma'lumotlar o'zgarganda hisoblash
   useEffect(() => {
-    handleGetUsers();
-  }, []);
-  useEffect(() => {
-    if (!allStores) return;
+    if (!data) return;
 
+    // Umumiy yopilgan nasiyalar
+    const closedDebtsCount =
+      data.debts?.filter((debt) => debt.debt_status === "closed").length ?? 0;
+    setTotalClosedDebts(closedDebtsCount);
+
+    const today = new Date(); // To avoid calling new Date() multiple times
+
+    // Period bo'yicha filtrlash
     if (period === "day") {
-      handleDaySelected();
+      const todayStr = today.toDateString();
+
+      const usersToday = data.stores.filter(
+        (user) => new Date(user.created_at).toDateString() === todayStr
+      ).length;
+
+      const closedDebtsToday = data.debts.filter(
+        (debt) =>
+          debt.debt_status === "closed" &&
+          new Date(debt.created_at).toDateString() === todayStr
+      ).length;
+
+      setCountNewUsers(usersToday);
+      setNewClosedDebts(closedDebtsToday);
     } else if (period === "month") {
-      handleMonthSelected();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+
+      const usersThisMonth = data.stores.filter((user) => {
+        const date = new Date(user.created_at);
+        return (
+          date.getMonth() === currentMonth && date.getFullYear() === currentYear
+        );
+      }).length;
+
+      const closedDebtsThisMonth = data.debts.filter((debt) => {
+        const date = new Date(debt.created_at);
+        return (
+          debt.debt_status === "closed" &&
+          date.getMonth() === currentMonth &&
+          date.getFullYear() === currentYear
+        );
+      }).length;
+
+      setCountNewUsers(usersThisMonth);
+      setNewClosedDebts(closedDebtsThisMonth);
     } else if (period === "year") {
-      handleYearSelected();
+      const currentYear = today.getFullYear();
+
+      const usersThisYear = data.stores.filter(
+        (user) => new Date(user.created_at).getFullYear() === currentYear
+      ).length;
+
+      const closedDebtsThisYear = data.debts.filter(
+        (debt) =>
+          debt.debt_status === "closed" &&
+          new Date(debt.created_at).getFullYear() === currentYear
+      ).length;
+
+      setCountNewUsers(usersThisYear);
+      setNewClosedDebts(closedDebtsThisYear);
     }
-  }, [period, allStores]);
+  }, [period, data]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
+        {[1, 2].map((i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 animate-pulse"
+          >
+            <div className="w-12 h-12 bg-gray-200 rounded-xl dark:bg-gray-700 mb-5"></div>
+            <div className="h-4 bg-gray-200 rounded dark:bg-gray-700 w-1/2 mb-3"></div>
+            <div className="h-6 bg-gray-200 rounded dark:bg-gray-700 w-3/4"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
@@ -159,7 +111,7 @@ export default function EcommerceMetrics({ period }: Props) {
               Umumiy Foydalanuvchilar
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90 flex  gap-5">
-              {allStores?.total_users}{" "}
+              {data?.total_users ?? 0}{" "}
               <span className="bg-green-500/30 text-[16px] font-semibold rounded-full text-center px-2">
                 + {countNewUsers}{" "}
                 <span className="text-[12px] font-extralight">
@@ -183,12 +135,11 @@ export default function EcommerceMetrics({ period }: Props) {
               Umumiy Yopilgan Nasiyalar
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90 flex gap-5">
-              {totalcClosedDebts}{" "}
+              {totalClosedDebts}{" "}
               <span className="bg-green-500/30 text-[16px] font-semibold rounded-full text-center px-2">
                 + {newClosedDebts}{" "}
                 <span className="text-[12px] font-extralight">
                   Yangi yopilgan nasiyalar
-                  
                 </span>
               </span>
             </h4>

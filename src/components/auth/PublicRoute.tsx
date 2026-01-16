@@ -12,6 +12,5 @@ export default function PublicRoute() {
     );
   }
 
-  // Agar foydalanuvchi login qilgan bo'lsa, / ga yo'naltiradi
   return !isAuthenticated ? <Outlet /> : <Navigate to="/" replace />;
 }

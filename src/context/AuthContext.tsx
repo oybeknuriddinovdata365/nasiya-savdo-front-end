@@ -15,6 +15,7 @@ export interface User {
   username?: string;
   phone_number?: string;
   role: UserRole;
+  image?: string;
 }
 
 interface AuthContextType {
