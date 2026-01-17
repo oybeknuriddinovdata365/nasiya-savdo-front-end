@@ -7,6 +7,7 @@ import {
   CheckCheck,
   Clock,
   DollarSign,
+  Download,
   FileText,
   Mail,
   MapPinned,
@@ -83,7 +84,6 @@ const getImageUrl = (path?: string) => {
 
   return `${rootUrl}${cleanPath}`;
 };
-
 const formatDate = (date?: string) => {
   if (!date) return "-";
   return new Date(date).toLocaleDateString("uz-UZ", {
@@ -108,6 +108,7 @@ function UserInfo() {
   const [userData, setUserData] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const fetchUserData = async () => {
     try {
@@ -191,6 +192,29 @@ function UserInfo() {
     );
   }
 
+  const handleDownloadImage = async (imagePath: string) => {
+    try {
+      const imageUrl = getImageUrl(imagePath);
+
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = imagePath.split("/").pop() || "image";
+      document.body.appendChild(link);
+
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Rasmni yuklab olishda xatolik:", err);
+    }
+  };
+
   return (
     <div>
       <PageBreadcrumb
@@ -201,13 +225,15 @@ function UserInfo() {
       />
       <div className="flex flex-col gap-8 pb-10">
         <p className="text-gray-500 dark:text-gray-400">
-          Foydalanuvchi haqida to'liq ma'lumot, nasiyalar va to'lovlar bo'yicha
-          umumiy ma'lumot
+          Foydalanuvchi haqida, nasiyalar va to'lovlar bo'yicha umumiy ma'lumot
         </p>
 
         <div className="bg-white dark:bg-[#171F2F] shadow-sm border border-gray-100 dark:border-gray-800 p-6 rounded-xl flex flex-col md:flex-row justify-between gap-6">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-start text-center md:text-left">
-            <div className="relative w-24 h-24 shrink-0">
+            <div
+              className="relative w-24 h-24 shrink-0 cursor-pointer"
+              onClick={() => setSelectedImage(userData?.image ?? null)}
+            >
               <img
                 src={
                   userData?.image
@@ -494,6 +520,48 @@ function UserInfo() {
           </div>
         </div>
       </div>
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 sm:p-8"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative w-auto h-auto max-w-full max-h-full flex items-center justify-center group">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 z-[1000] p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all
+              opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 right-4"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => handleDownloadImage(selectedImage)}
+              className="  absolute top-4 z-[1000] p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all
+              opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 right-15"
+              title="Yuklab olish"
+            >
+              <Download size={26} strokeWidth={2} />
+            </button>
+            <img
+              src={getImageUrl(selectedImage)}
+              alt="Full preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

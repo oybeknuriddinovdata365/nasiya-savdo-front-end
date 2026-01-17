@@ -1,5 +1,6 @@
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import axios from "axios";
+import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 // Agar iconlar bo'lmasa, oddiy text yoki svg ishlatamiz.
@@ -82,8 +83,7 @@ const getImageUrl = (path?: string) => {
   if (path.startsWith("http")) return path;
 
   const baseUrl = import.meta.env.VITE_API_URL;
-  // Ko'pincha API_URL /api bilan tugaydi, lekin rasmlar rootda bo'ladi.
-  // Shuning uchun /api ni olib tashlaymiz.
+
   const rootUrl = baseUrl.endsWith("/api") ? baseUrl.slice(0, -4) : baseUrl;
 
   // Dublikat slashlarni oldini olish
@@ -171,6 +171,29 @@ export default function DebtorInfoPage() {
     );
   }
 
+  const handleDownloadImage = async (imagePath: string) => {
+    try {
+      const imageUrl = getImageUrl(imagePath);
+
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = imagePath.split("/").pop() || "image";
+      document.body.appendChild(link);
+
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Rasmni yuklab olishda xatolik:", err);
+    }
+  };
+  
   return (
     <div className="min-h-screen pb-10">
       <PageBreadcrumb
@@ -421,7 +444,8 @@ export default function DebtorInfoPage() {
           <div className="relative w-auto h-auto max-w-full max-h-full flex items-center justify-center group">
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 z-[1000] p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+              className="absolute top-4 z-[1000] p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all
+              opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 right-4"
             >
               <svg
                 className="w-6 h-6"
@@ -436,6 +460,14 @@ export default function DebtorInfoPage() {
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
+            </button>
+            <button
+              onClick={() => handleDownloadImage(selectedImage)}
+              className="  absolute top-4 z-[1000] p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all
+              opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 right-15"
+              title="Yuklab olish"
+            >
+              <Download size={26} strokeWidth={2} />
             </button>
             <img
               src={getImageUrl(selectedImage)}

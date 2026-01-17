@@ -59,12 +59,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
             <img
               src="/images/logo/logo.svg"
               alt="Logo"
-              className="w-8 h-8 dark:hidden"
-            />
-            <img
-              src="/images/logo/logo-dark.svg"
-              alt="Logo"
-              className="hidden w-8 h-8 dark:block"
+              className="w-8 h-8"
             />
           </Link>
         </div>

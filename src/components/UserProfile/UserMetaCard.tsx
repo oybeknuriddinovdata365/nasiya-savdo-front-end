@@ -245,6 +245,24 @@ export default function UserMetaCard() {
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               Profilni tahrirlash
             </h3>
+            <button
+              onClick={closeModal}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           </div>
 
           <form onSubmit={handleSaveClick} className="p-6">

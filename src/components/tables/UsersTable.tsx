@@ -58,7 +58,7 @@ interface User {
   pin_code: string;
   wallet: number;
   file: File | null;
-  image: string | null; 
+  image: string | null;
   is_active: boolean;
   is_blocked: boolean;
 }
