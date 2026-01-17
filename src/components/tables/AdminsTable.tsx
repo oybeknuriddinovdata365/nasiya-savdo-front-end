@@ -25,7 +25,7 @@ import {
   PencilIcon,
   TrashBinIcon,
 } from "../../icons";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import PhoneInput from "../form/group-input/PhoneInput";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -33,50 +33,81 @@ import { SkeletonRow } from "../common/SkeletonRow";
 import { Admin } from "../common/types";
 import { useAuth } from "../../context/AuthContext";
 import SearchInput from "../ui/search/SearchInput";
+
 interface ErrorType {
   username?: string;
   password?: string;
   phone?: string;
 }
-export default function UsersTable() {
+
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
+const PHONE_PREFIX_REGEX = /^\+998(90|91|93|94|95|97|88|99)/;
+const INITIAL_FORM_STATE = {
+  username: "",
+  password: "",
+  phone_number: "",
+};
+const ITEMS_PER_PAGE = 10;
+const COUNTRIES = [{ code: "UZ", label: "+998" }];
+
+export default function AdminsTable() {
   const [originalData, setOriginalData] = useState<{
     username: string;
     phone_number: string;
   } | null>(null);
-  const [formData, setFormData] = useState<{
-    username: string;
-    password: string;
-    phone_number: string;
-  }>({
-    username: "",
-    password: "",
-    phone_number: "",
-  });
 
-  const pustoyForm = {
-    username: "",
-    password: "",
-    phone_number: "",
-  };
-  const close = () => {
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [showPassword, setShowPassword] = useState(false);
+  const { isOpen, openModal, closeModal } = useModal();
+  const [errors, setErrors] = useState<ErrorType>({});
+  const [usersData, setUsersData] = useState<Admin[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [editUserId, setEditUserId] = useState<number | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [supAdmData, setSupAdmData] = useState<Admin[]>([]);
+  const {
+    isOpen: isDeleteOpen,
+    openModal: openDeleteModal,
+    closeModal: closeDeleteModal,
+  } = useModal();
+
+  const { user } = useAuth();
+  const API = import.meta.env.VITE_API_URL;
+
+  const handleCloseModal = () => {
     closeModal();
     setErrors({});
     setEditUserId(null);
-    setFormData(pustoyForm);
+    setFormData(INITIAL_FORM_STATE);
+    setOriginalData(null);
   };
 
-  const [showPassword, setShowPassword] = useState(false);
-  const { isOpen, openModal, closeModal } = useModal();
+  const closeModalMain = () => {
+    handleCloseModal();
+  };
+
+  const handleOpenAddModal = () => {
+    setEditUserId(null);
+    setFormData(INITIAL_FORM_STATE);
+    setOriginalData(null);
+    setErrors({});
+    openModal();
+  };
+
+  const hasValueChanged = (a: unknown, b: unknown) => String(a) !== String(b);
+
   const getChangedFields = () => {
     if (!originalData) return {};
-
     const payload: Partial<typeof formData> = {};
 
-    if (formData.username !== originalData.username) {
+    if (hasValueChanged(formData.username, originalData.username)) {
       payload.username = formData.username;
     }
 
-    if (formData.phone_number !== originalData.phone_number) {
+    if (hasValueChanged(formData.phone_number, originalData.phone_number)) {
       payload.phone_number = formData.phone_number;
     }
 
@@ -86,11 +117,110 @@ export default function UsersTable() {
     return payload;
   };
 
+  const validateCreate = () => {
+    const newErrors: ErrorType = {};
+    const isEdit = editUserId !== null;
+
+    if (!isEdit || formData.password.trim().length > 0) {
+      if (!PASSWORD_REGEX.test(formData.password)) {
+        newErrors.password =
+          "Parol kamida 8 ta belgidan va Kuchli bo'lishi kerak. Masalan: Pass1!";
+      }
+    }
+
+    if (
+      !formData.phone_number.startsWith("+998") ||
+      formData.phone_number.length !== 13
+    ) {
+      newErrors.phone = "Telefon raqam noto'g'ri formatda kiritildi";
+    } else if (!PHONE_PREFIX_REGEX.test(formData.phone_number)) {
+      newErrors.phone = "Telefon raqam kodi noto'g'ri";
+    } else if (
+      [...usersData, ...supAdmData].some(
+        (u) => u.phone_number === formData.phone_number && u.id !== editUserId,
+      ) ||
+      formData.phone_number === user?.phone_number
+    ) {
+      newErrors.phone = "Telefon raqam allaqachon mavjud";
+    }
+
+    if (
+      [...usersData, ...supAdmData].some(
+        (u) =>
+          u.username.toLowerCase() === formData.username.trim().toLowerCase() &&
+          u.id !== editUserId,
+      ) ||
+      formData.username.trim().toLowerCase() === user?.username?.toLowerCase()
+    ) {
+      newErrors.username = "Login allaqachon mavjud";
+    }
+
+    if (!formData.username) {
+      newErrors.username = "Login kiritilmadi";
+    } else if (formData.username.trim().length < 3) {
+      newErrors.username = "Login Kamida 3 ta belgidan iborat bo'lishi kerak";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateUpdate = () => {
+    if (!originalData) return true;
+    const newErrors: ErrorType = {};
+
+    // USERNAME
+    const usernameInput = formData.username.trim().toLowerCase();
+
+    if (usernameInput.length < 3) {
+      newErrors.username = "Login kamida 3 ta belgidan iborat bo'lishi kerak";
+    } else if (
+      [...usersData, ...supAdmData].some(
+        (u) =>
+          u.username.toLowerCase() === usernameInput && u.id !== editUserId,
+      )
+    ) {
+      newErrors.username = "Login allaqachon mavjud";
+    }
+    // PHONE
+    if (
+      formData.phone_number &&
+      hasValueChanged(formData.phone_number, originalData.phone_number)
+    ) {
+      if (
+        !formData.phone_number.startsWith("+998") ||
+        formData.phone_number.length !== 13
+      ) {
+        newErrors.phone = "Telefon raqam noto'g'ri formatda";
+      } else if (!PHONE_PREFIX_REGEX.test(formData.phone_number)) {
+        newErrors.phone = "Telefon raqam kodi noto'g'ri";
+      } else if (
+        [...usersData, ...supAdmData].some(
+          (u) =>
+            u.phone_number === formData.phone_number && u.id !== editUserId,
+        )
+      ) {
+        newErrors.phone = "Telefon raqam allaqachon mavjud";
+      }
+    }
+
+    // PASSWORD
+    if (formData.password.trim().length > 0) {
+      if (!PASSWORD_REGEX.test(formData.password)) {
+        newErrors.password =
+          "Parol kamida 8 ta belgidan va kuchli bo'lishi kerak";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleCreateUser = async () => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("access_token");
-      if (!token) return;
+      if (!token) return false;
       const res = await axios.post(`${API}/admin/`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -103,11 +233,12 @@ export default function UsersTable() {
       };
       setUsersData((prev) => [...prev, newAdmin]);
       toast.success("Admin muvaffaqiyatli qo'shildi!");
-      setFormData(pustoyForm);
-      closeModal();
+      handleCloseModal();
+      return true;
     } catch (err) {
       console.error("Create admin error:", err);
       toast.error("Admin qo'shishda xatolik yuz berdi");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -116,13 +247,13 @@ export default function UsersTable() {
   const handleUpdateUser = async () => {
     try {
       const token = localStorage.getItem("access_token");
-      if (!token || !editUserId || !originalData) return;
+      if (!token || !editUserId || !originalData) return false;
 
       const payload = getChangedFields();
 
       if (Object.keys(payload).length === 0) {
         toast.error("Hech qanday o'zgarish kiritilmadi");
-        return;
+        return false;
       }
 
       const res = await axios.patch(`${API}/admin/${editUserId}`, payload, {
@@ -130,47 +261,35 @@ export default function UsersTable() {
       });
 
       toast.success("Admin muvaffaqiyatli yangilandi!");
-
       const updatedUser = res.data.data;
-
       setUsersData((prev) =>
-        prev.map((u) => (u.id === editUserId ? updatedUser : u))
+        prev.map((u) => (u.id === editUserId ? updatedUser : u)),
       );
-
-      closeModal();
+      handleCloseModal();
+      return true;
     } catch (error) {
       console.error("Update error:", error);
       toast.error("Yangilashda xatolik yuz berdi!");
+      return false;
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (editUserId) {
-      if (!FetchValidate()) return;
-      handleUpdateUser();
+      if (!validateUpdate()) return;
+      await handleUpdateUser();
     } else {
-      if (!CreateValidate()) return;
-      handleCreateUser();
+      if (!validateCreate()) return;
+      await handleCreateUser();
     }
-    setErrors({});
-    setEditUserId(null);
-    setFormData(pustoyForm);
     closeModal();
   };
-  const countries = [{ code: "UZ", label: "+998" }];
+
   const handlePhoneNumberChange = (phoneNumber: string) => {
     setFormData({ ...formData, phone_number: phoneNumber });
   };
 
-  const [errors, setErrors] = useState<ErrorType>({});
-  const [usersData, setUsersData] = useState<Admin[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const closeModalMain = () => {
-    closeModal();
-    setErrors({});
-  };
   const handleDeleteUser = async () => {
     try {
       setIsLoading(true);
@@ -191,8 +310,22 @@ export default function UsersTable() {
       setIsLoading(false);
     }
   };
-  const { user } = useAuth();
-  const API = import.meta.env.VITE_API_URL;
+
+  const handleEdit = (user: Admin) => {
+    setEditUserId(user.id);
+    setFormData({
+      username: user.username,
+      password: "",
+      phone_number: user.phone_number,
+    });
+    setOriginalData({
+      username: user.username,
+      phone_number: user.phone_number,
+    });
+    setErrors({});
+    openModal();
+  };
+
   useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
@@ -208,10 +341,15 @@ export default function UsersTable() {
           ? response.data.data
           : [response.data.data];
 
-        usersArray = usersArray.filter(
-          (user: Admin) => user.role?.toLowerCase() !== "superadmin"
+        const superadminData = usersArray.filter(
+          (user: Admin) => user.role?.toLowerCase() === "superadmin",
         );
 
+        usersArray = usersArray.filter(
+          (user: Admin) => user.role?.toLowerCase() !== "superadmin",
+        );
+
+        setSupAdmData(superadminData);
         setUsersData(usersArray);
       } catch (err) {
         console.error("Fetch users error:", err);
@@ -223,161 +361,29 @@ export default function UsersTable() {
     fetchUsers();
   }, [API]);
 
-  const CreateValidate = () => {
-    const newErrors: ErrorType = {};
-    const isEdit = editUserId !== null;
-    if (!isEdit || formData.password.trim().length > 0) {
-      const passwordRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
-      if (!passwordRegex.test(formData.password)) {
-        newErrors.password =
-          "Parol kamida 8 ta belgidan va Kuchli bo'lishi kerak. Masalan: Pass1!";
-      }
-    }
-    if (
-      !formData.phone_number.startsWith("+998") ||
-      formData.phone_number.length !== 13
-    ) {
-      newErrors.phone = "Telefon raqam noto'g'ri formatda kiritildi";
-    } else if (!/^\+998(90|91|93|94|95|97|88|99)/.test(formData.phone_number)) {
-      newErrors.phone = "Telefon raqam kodi noto'g'ri";
-    } else if (
-      usersData.some(
-        (u) => u.phone_number === formData.phone_number && u.id !== editUserId
-      ) ||
-      formData.phone_number === user?.phone_number
-    ) {
-      newErrors.phone = "Telefon raqam allaqachon mavjud";
-    }
-
-    if (
-      usersData.some(
-        (u) => u.username === formData.username && u.id !== editUserId
-      ) ||
-      formData.username === user?.username
-    ) {
-      newErrors.username = "Login allaqachon mavjud";
-    }
-    if (!formData.username) {
-      newErrors.username = "Login kiritilmadi";
-    }
-    if (formData.username.trim().length < 3) {
-      newErrors.username = "Login Kamida 3 ta belgidan iborat bo'lishi kerak";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  const isChanged = (a: any, b: any) => String(a) !== String(b);
-
-  const FetchValidate = () => {
-    if (!originalData) return true;
-
-    const newErrors: ErrorType = {};
-
-    // USERNAME
-    if (
-      formData.username &&
-      isChanged(formData.username, originalData.username)
-    ) {
-      if (formData.username.length < 3) {
-        newErrors.username = "Login kamida 3 ta belgidan iborat bo'lishi kerak";
-      }
-
-      if (
-        usersData.some(
-          (u) => u.username === formData.username && u.id !== editUserId
-        )
-      ) {
-        newErrors.username = "Login allaqachon mavjud";
-      }
-    }
-
-    // PHONE
-    if (
-      formData.phone_number &&
-      isChanged(formData.phone_number, originalData.phone_number)
-    ) {
-      if (
-        !formData.phone_number.startsWith("+998") ||
-        formData.phone_number.length !== 13
-      ) {
-        newErrors.phone = "Telefon raqam noto'g'ri formatda";
-      } else if (
-        !/^\+998(90|91|93|94|95|97|88|99)/.test(formData.phone_number)
-      ) {
-        newErrors.phone = "Telefon raqam kodi notogri";
-      } else if (
-        usersData.some(
-          (u) => u.phone_number === formData.phone_number && u.id !== editUserId
-        )
-      ) {
-        newErrors.phone = "Telefon raqam allaqachon mavjud";
-      }
-    }
-
-    // PASSWORD (faqat yozilgan bo‘lsa)
-    if (formData.password.trim().length > 0) {
-      const passwordRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.]).{8,}$/;
-
-      if (!passwordRegex.test(formData.password)) {
-        newErrors.password =
-          "Parol kamida 8 ta belgidan va kuchli bo‘lishi kerak";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const [editUserId, setEditUserId] = useState<number | null>(null);
-  const handleEdit = (user: Admin) => {
-    setEditUserId(user.id);
-    setFormData({
-      username: user.username,
-      password: "",
-      phone_number: user.phone_number,
-    });
-    setOriginalData({
-      username: user.username,
-      phone_number: user.phone_number,
-    });
-    openModal();
-  };
-
-  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
-  const {
-    isOpen: isDeleteOpen,
-    openModal: openDeleteModal,
-    closeModal: closeDeleteModal,
-  } = useModal();
-
-  // Search
-
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredUsers = usersData.filter((user) => {
+  const filteredUsers = useMemo(() => {
     const search = searchTerm.toLowerCase();
-
-    return (
-      user.username.toLowerCase().includes(search) ||
-      user.phone_number.includes(search) ||
-      user.role?.toLowerCase().includes(search)
+    return usersData.filter(
+      (user) =>
+        user.username.toLowerCase().includes(search) ||
+        user.phone_number.includes(search) ||
+        user.role?.toLowerCase().includes(search),
     );
-  });
-
-  // Pagination
-
-  const ITEMS_PER_PAGE = 10;
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
+  }, [usersData, searchTerm]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   return (
     <div className="flex  flex-col gap-5">
@@ -391,7 +397,7 @@ export default function UsersTable() {
             setSearchTerm(e.target.value)
           }
         />
-        <Button onClick={openModal} size="sm">
+        <Button onClick={handleOpenAddModal} size="sm">
           Admin qo'shish
         </Button>
       </div>
@@ -490,7 +496,11 @@ export default function UsersTable() {
               </TableBody>
             </Table>
           )}
-          <Modal isOpen={isOpen} onClose={close} className="max-w-[700px] m-4">
+          <Modal
+            isOpen={isOpen}
+            onClose={handleCloseModal}
+            className="max-w-[700px] m-4"
+          >
             <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
               <form className="flex flex-col">
                 <div className="custom-scrollbar h-[500px] overflow-y-auto px-2 pb-3">
@@ -564,12 +574,13 @@ export default function UsersTable() {
                               : "+998"
                           }
                           selectPosition="start"
-                          countries={countries}
+                          countries={COUNTRIES}
                           onChange={handlePhoneNumberChange}
                         />
                         <p className="dark:text-gray-400 text-gray-600 text-[13px] flex gap-2 items-center">
                           <InfoIcon className="text-[25px]" /> Telefon Raqam
-                          Kodlari togri kiritilishi kerak (masalan: 97, 93, 94)
+                          Kodlari to'g'ri kiritilishi kerak (masalan: 97, 93,
+                          94)
                         </p>
                         {errors.phone && (
                           <p className="text-red-500 text-[12px] mt-1">
@@ -603,7 +614,7 @@ export default function UsersTable() {
               </div>
               <div className="mt-5">
                 <p className="dark:text-white/70 text-sm text-black/70">
-                  Buyruqni Tadiqlaysizmi? Siz rostdan ham{" "}
+                  Buyruqni Tasdiqlaysizmi? Siz rostdan ham{" "}
                   <span className="text-black dark:text-white bg-red-500/20 text-[16px]">
                     {
                       usersData.find((user) => user.id === deleteUserId)
@@ -658,7 +669,7 @@ export default function UsersTable() {
                       {page}
                     </PaginationLink>
                   </PaginationItem>
-                )
+                ),
               )}
 
               <PaginationItem>
