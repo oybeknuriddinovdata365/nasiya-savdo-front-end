@@ -186,7 +186,6 @@ export default function DebtorInfoPage() {
       document.body.appendChild(link);
 
       link.click();
-
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -389,7 +388,7 @@ export default function DebtorInfoPage() {
 
                     <div>
                       <span className="text-gray-400 block text-xs uppercase tracking-wider mb-1">
-                        Oylik to‘lov
+                        Oylik to'lov
                       </span>
                       <span className="font-medium text-gray-800 dark:text-gray-200">
                         {formatMoney(debt.monthly_amount)}
@@ -407,7 +406,7 @@ export default function DebtorInfoPage() {
 
                     <div>
                       <span className="text-gray-400 block text-xs uppercase tracking-wider mb-1">
-                        To‘lov sanasi
+                        To'lov sanasi
                       </span>
                       <span className="font-medium text-gray-800 dark:text-gray-200">
                         Har oyning {debt.payment_day}-kuni
@@ -416,7 +415,7 @@ export default function DebtorInfoPage() {
 
                     <div>
                       <span className="text-gray-400 block text-xs uppercase tracking-wider mb-1">
-                        Keyingi to‘lov
+                        Keyingi to'lov
                       </span>
                       <span className="font-medium badge bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-0.5 rounded">
                         {formatDate(debt.next_payment_date)}

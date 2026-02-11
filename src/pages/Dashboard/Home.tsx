@@ -48,31 +48,40 @@ const PERIOD_OPTIONS = [
 export default function Home() {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>("day");
   const [statsData, setStatsData] = useState<DashboardResponse | null>(null);
+  const [closedDebts, setClosedDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const token = localStorage.getItem("access_token");
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllData = async () => {
       setIsLoading(true);
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_URL}/admin/statistics`,
-          {
+        const [statsRes, closedRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/admin/statistics`, {
             headers: { Authorization: "Bearer " + token },
-          }
-        );
-        setStatsData(res.data.data);
+          }),
+          // axios.get(`${import.meta.env.VITE_API_URL}/payment/closed`, {
+          //   headers: { Authorization: "Bearer " + token },
+          // }),
+          []
+        ]);
+
+        setStatsData(statsRes.data.data);
+        setClosedDebts(closedRes);
       } catch (error) {
-        console.error("Statistika yuklashda xatolik:", error);
+        console.error("Ma'lumot yuklashda xatolik:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchAllData();
   }, [token]);
 
+  useEffect(() => {
+    console.log(closedDebts)
+  }, [closedDebts]);
   const handleSelectChange = (value: string) => {
     setSelectedPeriod(value as Period);
   };
@@ -92,7 +101,8 @@ export default function Home() {
 
       <EcommerceMetrics
         period={selectedPeriod}
-        data={statsData}
+        usersData={statsData}
+        debtsData={closedDebts}
         isLoading={isLoading}
       />
 

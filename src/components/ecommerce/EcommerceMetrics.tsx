@@ -4,22 +4,23 @@ import { DashboardResponse, Period } from "../../pages/Dashboard/Home";
 
 interface Props {
   period: Period;
-  data: DashboardResponse | null;
+  usersData: DashboardResponse | null;
+  debtsData:  any[];
   isLoading: boolean;
 }
 
-export default function EcommerceMetrics({ period, data, isLoading }: Props) {
+export default function EcommerceMetrics({ period, usersData, debtsData, isLoading }: Props) {
   const [countNewUsers, setCountNewUsers] = useState<number>(0);
   const [totalClosedDebts, setTotalClosedDebts] = useState<number>(0);
   const [newClosedDebts, setNewClosedDebts] = useState<number>(0);
 
   // Ma'lumotlar o'zgarganda hisoblash
   useEffect(() => {
-    if (!data) return;
+    if (!usersData) return;
 
     // Umumiy yopilgan nasiyalar
     const closedDebtsCount =
-      data.debts?.filter((debt) => debt.debt_status === "closed").length ?? 0;
+      usersData?.debts?.filter((debt) => debt.debt_status === "closed").length ?? 0;
     setTotalClosedDebts(closedDebtsCount);
 
     const today = new Date(); // To avoid calling new Date() multiple times
@@ -28,11 +29,11 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
     if (period === "day") {
       const todayStr = today.toDateString();
 
-      const usersToday = data.stores.filter(
+      const usersToday = usersData?.stores.filter(
         (user) => new Date(user.created_at).toDateString() === todayStr,
       ).length;
 
-      const closedDebtsToday = data.debts.filter(
+      const closedDebtsToday = usersData?.debts.filter(
         (debt) =>
           debt.debt_status === "closed" &&
           new Date(debt.created_at).toDateString() === todayStr,
@@ -44,14 +45,14 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
 
-      const usersThisMonth = data.stores.filter((user) => {
+      const usersThisMonth = usersData?.stores.filter((user) => {
         const date = new Date(user.created_at);
         return (
           date.getMonth() === currentMonth && date.getFullYear() === currentYear
         );
       }).length;
 
-      const closedDebtsThisMonth = data.debts.filter((debt) => {
+      const closedDebtsThisMonth = usersData?.debts.filter((debt) => {
         const date = new Date(debt.created_at);
         return (
           debt.debt_status === "closed" &&
@@ -62,14 +63,15 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
 
       setCountNewUsers(usersThisMonth);
       setNewClosedDebts(closedDebtsThisMonth);
+
     } else if (period === "year") {
       const currentYear = today.getFullYear();
 
-      const usersThisYear = data.stores.filter(
+      const usersThisYear = usersData?.stores.filter(
         (user) => new Date(user.created_at).getFullYear() === currentYear,
       ).length;
 
-      const closedDebtsThisYear = data.debts.filter(
+      const closedDebtsThisYear = usersData?.debts.filter(
         (debt) =>
           debt.debt_status === "closed" &&
           new Date(debt.created_at).getFullYear() === currentYear,
@@ -78,7 +80,7 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
       setCountNewUsers(usersThisYear);
       setNewClosedDebts(closedDebtsThisYear);
     }
-  }, [period, data]);
+  }, [period, usersData, debtsData]);
 
   if (isLoading) {
     return (
@@ -111,7 +113,7 @@ export default function EcommerceMetrics({ period, data, isLoading }: Props) {
               Umumiy Foydalanuvchilar
             </span>
             <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90 flex  gap-5">
-              {data?.total_users ?? 0}{" "}
+              {usersData?.total_users ?? 0}{" "}
               <span className="bg-green-500/30 text-[16px] font-semibold rounded-full text-center px-2">
                 + {countNewUsers}{" "}
                 <span className="text-[12px] font-extralight">
